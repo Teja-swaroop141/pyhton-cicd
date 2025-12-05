@@ -1,0 +1,41 @@
+name: CI-CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Install Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install Flask + pytest
+      run: pip install flask pytest
+
+    - name: Run tests
+      run: pytest
+
+    - name: Login to Docker Hub
+      run: echo ${{ secrets.DOCKER_PASS }} | docker login -u ${{ secrets.DOCKER_USER }} --password-stdin
+
+    - name: Build Docker image
+      run: docker build -t ${{ secrets.DOCKER_USER }}/todo:latest .
+
+    - name: Push image
+      run: docker push ${{ secrets.DOCKER_USER }}/todo:latest
+
+    - name: Configure kubectl
+      run: |
+        mkdir ~/.kube
+        echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+
+    - name: Deploy to Kubernetes
+      run: kubectl apply -f deployment.yml
