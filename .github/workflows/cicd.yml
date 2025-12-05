@@ -32,10 +32,6 @@ jobs:
     - name: Push image
       run: docker push ${{ secrets.DOCKER_USER }}/todo:latest
 
-    - name: Configure kubectl
-      run: |
-        mkdir ~/.kube
-        echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+    - name: Deployment handled locally
+      run: echo "Kubernetes deployment is executed in local environment"
 
-    - name: Deploy to Kubernetes
-      run: kubectl apply -f deployment.yml
