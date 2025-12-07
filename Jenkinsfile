@@ -1,42 +1,51 @@
 pipeline {
     agent any
 
-    environment {
-        DOCKER_USER = credentials('dockerhub-user')
-        DOCKER_PASS = credentials('dockerhub-pass')
-    }
-
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/Teja-swaroop141/pyhton-cicd.git'
+                // Uses the same repo this Jenkinsfile came from
+                checkout scm
             }
         }
 
         stage('Test') {
             steps {
-                sh 'pip install flask pytest'
-                sh 'pytest'
+                bat """
+                python -m pip install --upgrade pip
+                pip install flask pytest
+                pytest
+                """
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build & Push Docker Image') {
             steps {
-                sh "docker build -t ${DOCKER_USER}/todo:latest ."
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                sh "echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin"
-                sh "docker push ${DOCKER_USER}/todo:latest"
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-user',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
+                    bat """
+                    docker build -t %DOCKER_USER%/todo:latest .
+                    docker login -u %DOCKER_USER% -p %DOCKER_PASS%
+                    docker push %DOCKER_USER%/todo:latest
+                    """
+                }
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                    sh 'kubectl apply -f deployment.yml'
+                withCredentials([
+                    file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')
+                ]) {
+                    bat """
+                    kubectl apply -f deployment.yml
+                    kubectl rollout status deployment/todo-app
+                    """
                 }
             }
         }
