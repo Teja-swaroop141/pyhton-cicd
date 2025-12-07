@@ -5,7 +5,7 @@ todos = []
 
 @app.route('/')
 def home():
-    return "To-Do App Backend Running! and also updated the pipeline check"
+    return "To-Do App Backend Running! and checking pipeline kubectl"
 
 @app.route('/todos', methods=['GET'])
 def get_todos():
